@@ -6,9 +6,13 @@ on:
       - main
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -20,21 +24,29 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       - run: npm ci
-      - run: npm run build -- --base-href /mertkebap-app/
+
+      - run: npm run build -- --base-href=/mertkebap-app/
 
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist/webapp/browser
 
   deploy:
+    needs: build
+
+    permissions:
+      pages: write
+      id-token: write
+
     environment:
       name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     runs-on: ubuntu-latest
 
-    needs: build
-
     steps:
-      - uses: actions/deploy-pages@v4
+      - id: deployment
+        uses: actions/deploy-pages@v4
